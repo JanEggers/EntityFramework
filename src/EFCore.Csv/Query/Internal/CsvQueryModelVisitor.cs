@@ -48,7 +48,7 @@ namespace Microsoft.EntityFrameworkCore.Csv.Query.Internal
             bool queryStateManager)
             where TEntity : class
             => ((CsvQueryContext)queryContext).Store
-                .GetTables(entityType)
+                .GetTableSnapshots(entityType)
                 .SelectMany(
                     t =>
                         t.Rows.Select(
@@ -103,7 +103,7 @@ namespace Microsoft.EntityFrameworkCore.Csv.Query.Internal
             QueryContext queryContext,
             IEntityType entityType)
             => ((CsvQueryContext)queryContext).Store
-                .GetTables(entityType)
+                .GetTableSnapshots(entityType)
                 .SelectMany(t => t.Rows.Select(vs => new ValueBuffer(vs)));
     }
 }

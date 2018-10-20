@@ -5,13 +5,16 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Linq;
+using CsvHelper;
 using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.ChangeTracking.Internal;
 using Microsoft.EntityFrameworkCore.Csv.Internal;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.EntityFrameworkCore.Update;
 using Microsoft.EntityFrameworkCore.Update.Internal;
 using Microsoft.EntityFrameworkCore.Utilities;
@@ -28,15 +31,57 @@ namespace Microsoft.EntityFrameworkCore.Csv.Storage.Internal
         private readonly bool _sensitiveLoggingEnabled;
         private readonly Dictionary<TKey, object[]> _rows;
 
+        /// <inheritdoc/>
+        public long LastKey { get; }
+
         /// <summary>
         ///     This API supports the Entity Framework Core infrastructure and is not intended to be used
         ///     directly from your code. This API may change or be removed in future releases.
         /// </summary>
-        public CsvTable([NotNull] IPrincipalKeyValueFactory<TKey> keyValueFactory, bool sensitiveLoggingEnabled)
+        public CsvTable([NotNull] IEntityType entityType, [NotNull] IPrincipalKeyValueFactory<TKey> keyValueFactory, bool sensitiveLoggingEnabled)
         {
             _keyValueFactory = keyValueFactory;
             _sensitiveLoggingEnabled = sensitiveLoggingEnabled;
             _rows = new Dictionary<TKey, object[]>(keyValueFactory.EqualityComparer);
+
+            var tablename = entityType.Relational().TableName;
+
+            using (var file = new FileStream($"{tablename}.csv", FileMode.Open))
+            using (var textReader = new StreamReader(file))
+            using (var csv = new CsvReader(textReader))
+            {
+                csv.Parser.Configuration.BadDataFound = null;
+                csv.Parser.Configuration.Delimiter = ";";
+                csv.Configuration.HasHeaderRecord = true;
+
+                csv.Read();
+                var header = csv.Parser.Context.Record;
+
+                var properties = entityType.GetProperties().ToDictionary(p => p.Name);
+
+                var fieldTypes = header.Select(h => properties[h].PropertyInfo.PropertyType).ToList();
+
+                while (csv.Read())
+                {
+                    var raw = csv.Parser.Context.Record;
+                    
+                    var converted = new object[raw.Length];
+                    for (int i = 0; i < raw.Length; i++)
+                    {
+                        converted[i] = Convert.ChangeType(raw[i], fieldTypes[i]);
+                    }
+
+                    var key = (TKey)_keyValueFactory.CreateFromBuffer(new ValueBuffer(converted));
+                    _rows[key] = converted;
+
+                    long longKey = Convert.ToInt64(key);
+                    if (longKey > LastKey)
+                    {
+                        LastKey = longKey;
+                    }
+                }
+            }
+
         }
 
         /// <summary>

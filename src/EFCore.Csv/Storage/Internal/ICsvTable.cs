@@ -36,5 +36,10 @@ namespace Microsoft.EntityFrameworkCore.Csv.Storage.Internal
         ///     directly from your code. This API may change or be removed in future releases.
         /// </summary>
         void Update([NotNull] IUpdateEntry entry);
+
+        /// <summary>
+        /// gets the last key
+        /// </summary>
+        long LastKey { get; }
     }
 }

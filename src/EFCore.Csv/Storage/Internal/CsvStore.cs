@@ -20,31 +20,18 @@ namespace Microsoft.EntityFrameworkCore.Csv.Storage.Internal
     public class CsvStore : ICsvStore
     {
         private readonly ICsvTableFactory _tableFactory;
-        private readonly bool _useNameMatching;
-
         private readonly object _lock = new object();
 
-        private LazyRef<Dictionary<object, ICsvTable>> _tables = CreateTables();
-
-        /// <summary>
-        ///     This API supports the Entity Framework Core infrastructure and is not intended to be used
-        ///     directly from your code. This API may change or be removed in future releases.
-        /// </summary>
-        public CsvStore([NotNull] ICsvTableFactory tableFactory)
-            : this(tableFactory, useNameMatching: false)
-        {
-        }
-
+        private readonly Dictionary<object, ICsvTable> _tables = new Dictionary<object, ICsvTable>();
+        
         /// <summary>
         ///     This API supports the Entity Framework Core infrastructure and is not intended to be used
         ///     directly from your code. This API may change or be removed in future releases.
         /// </summary>
         public CsvStore(
-            [NotNull] ICsvTableFactory tableFactory,
-            bool useNameMatching)
+            [NotNull] ICsvTableFactory tableFactory)
         {
             _tableFactory = tableFactory;
-            _useNameMatching = useNameMatching;
         }
 
         /// <summary>
@@ -57,11 +44,6 @@ namespace Microsoft.EntityFrameworkCore.Csv.Storage.Internal
         {
             lock (_lock)
             {
-                var returnValue = !_tables.HasValue;
-
-                // ReSharper disable once AssignmentIsFullyDiscarded
-                _ = _tables.Value;
-
                 var stateManager = new StateManager(stateManagerDependencies);
                 var entries = new List<IUpdateEntry>();
                 foreach (var entityType in stateManagerDependencies.Model.GetEntityTypes())
@@ -76,7 +58,7 @@ namespace Microsoft.EntityFrameworkCore.Csv.Storage.Internal
 
                 ExecuteTransaction(entries, updateLogger);
 
-                return returnValue;
+                return true;
             }
         }
 
@@ -88,39 +70,28 @@ namespace Microsoft.EntityFrameworkCore.Csv.Storage.Internal
         {
             lock (_lock)
             {
-                if (!_tables.HasValue)
+                if (_tables.Keys.Count == 0)
                 {
                     return false;
                 }
 
-                _tables = CreateTables();
-
+                _tables.Clear();
                 return true;
             }
         }
-
-        private static LazyRef<Dictionary<object, ICsvTable>> CreateTables()
-            => new LazyRef<Dictionary<object, ICsvTable>>(() => new Dictionary<object, ICsvTable>());
-
+        
         /// <summary>
         ///     This API supports the Entity Framework Core infrastructure and is not intended to be used
         ///     directly from your code. This API may change or be removed in future releases.
         /// </summary>
-        public virtual IReadOnlyList<CsvTableSnapshot> GetTables(IEntityType entityType)
+        public virtual IReadOnlyList<CsvTableSnapshot> GetTableSnapshots(IEntityType entityType)
         {
             var data = new List<CsvTableSnapshot>();
             lock (_lock)
             {
-                if (_tables.HasValue)
+                foreach (var et in entityType.GetConcreteTypesInHierarchy())
                 {
-                    foreach (var et in entityType.GetConcreteTypesInHierarchy())
-                    {
-                        var key = _useNameMatching ? (object)et.Name : et;
-                        if (_tables.Value.TryGetValue(key, out var table))
-                        {
-                            data.Add(new CsvTableSnapshot(et, table.SnapshotRows()));
-                        }
-                    }
+                    data.Add(new CsvTableSnapshot(et, GetTable(et).SnapshotRows()));
                 }
             }
 
@@ -147,11 +118,7 @@ namespace Microsoft.EntityFrameworkCore.Csv.Storage.Internal
 
                     Debug.Assert(!entityType.IsAbstract());
 
-                    var key = _useNameMatching ? (object)entityType.Name : entityType;
-                    if (!_tables.Value.TryGetValue(key, out var table))
-                    {
-                        _tables.Value.Add(key, table = _tableFactory.Create(entityType));
-                    }
+                    var table = GetTable(entityType);
 
                     if (entry.SharedIdentityEntry != null)
                     {
@@ -183,6 +150,18 @@ namespace Microsoft.EntityFrameworkCore.Csv.Storage.Internal
             updateLogger.ChangesSaved(entries, rowsAffected);
 
             return rowsAffected;
+        }
+
+        /// <inheritdoc/>
+        public ICsvTable GetTable(IEntityType entityType)
+        {
+            var key = entityType.ToString();
+            if (!_tables.TryGetValue(key, out var table))
+            {
+                _tables.Add(key, table = _tableFactory.Create(entityType));
+            }
+
+            return table;
         }
     }
 }

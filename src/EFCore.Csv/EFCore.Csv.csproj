@@ -16,6 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\EFCore.Relational\EFCore.Relational.csproj" />
     <ProjectReference Include="..\EFCore\EFCore.csproj" />
   </ItemGroup>
 
@@ -45,6 +46,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="CsvHelper" Version="7.1.1" />
     <PackageReference Include="StyleCop.Analyzers" Version="$(StyleCopAnalyzersPackageVersion)" PrivateAssets="All" />
   </ItemGroup>
 

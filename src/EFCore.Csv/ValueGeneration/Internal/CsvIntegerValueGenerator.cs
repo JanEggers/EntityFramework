@@ -5,6 +5,7 @@ using System;
 using System.Globalization;
 using System.Threading;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore.Csv.Storage.Internal;
 using Microsoft.EntityFrameworkCore.ValueGeneration;
 
 namespace Microsoft.EntityFrameworkCore.Csv.ValueGeneration.Internal
@@ -16,6 +17,15 @@ namespace Microsoft.EntityFrameworkCore.Csv.ValueGeneration.Internal
     public class CsvIntegerValueGenerator<TValue> : ValueGenerator<TValue>
     {
         private long _current;
+
+        /// <summary>
+        /// ctor
+        /// </summary>
+        /// <param name="table">the table</param>
+        public CsvIntegerValueGenerator(ICsvTable table)
+        {
+            _current = table.LastKey;
+        }
 
         /// <summary>
         ///     This API supports the Entity Framework Core infrastructure and is not intended to be used

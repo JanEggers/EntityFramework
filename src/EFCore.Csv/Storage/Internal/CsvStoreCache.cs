@@ -16,7 +16,6 @@ namespace Microsoft.EntityFrameworkCore.Csv.Storage.Internal
     public class CsvStoreCache : ICsvStoreCache
     {
         private readonly ICsvTableFactory _tableFactory;
-        private readonly bool _useNameMatching;
         private readonly ConcurrentDictionary<string, ICsvStore> _namedStores;
 
         /// <summary>
@@ -41,8 +40,6 @@ namespace Microsoft.EntityFrameworkCore.Csv.Storage.Internal
 
             if (options?.DatabaseRoot != null)
             {
-                _useNameMatching = true;
-
                 LazyInitializer.EnsureInitialized(
                     ref options.DatabaseRoot.Instance,
                     () => new ConcurrentDictionary<string, ICsvStore>());
@@ -60,6 +57,6 @@ namespace Microsoft.EntityFrameworkCore.Csv.Storage.Internal
         ///     directly from your code. This API may change or be removed in future releases.
         /// </summary>
         public virtual ICsvStore GetStore(string name)
-            => _namedStores.GetOrAdd(name, _ => new CsvStore(_tableFactory, _useNameMatching));
+            => _namedStores.GetOrAdd(name, _ => new CsvStore(_tableFactory));
     }
 }

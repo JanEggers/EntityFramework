@@ -50,6 +50,6 @@ namespace Microsoft.EntityFrameworkCore.Csv.Storage.Internal
 
         [UsedImplicitly]
         private static Func<ICsvTable> CreateFactory<TKey>(IKey key, bool sensitiveLoggingEnabled)
-            => () => new CsvTable<TKey>(key.GetPrincipalKeyValueFactory<TKey>(), sensitiveLoggingEnabled);
+            => () => new CsvTable<TKey>(key.DeclaringEntityType, key.GetPrincipalKeyValueFactory<TKey>(), sensitiveLoggingEnabled);
     }
 }

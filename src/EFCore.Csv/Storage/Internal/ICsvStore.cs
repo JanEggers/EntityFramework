@@ -34,7 +34,13 @@ namespace Microsoft.EntityFrameworkCore.Csv.Storage.Internal
         ///     This API supports the Entity Framework Core infrastructure and is not intended to be used
         ///     directly from your code. This API may change or be removed in future releases.
         /// </summary>
-        IReadOnlyList<CsvTableSnapshot> GetTables([NotNull] IEntityType entityType);
+        IReadOnlyList<CsvTableSnapshot> GetTableSnapshots([NotNull] IEntityType entityType);
+        
+        /// <summary>
+        ///     This API supports the Entity Framework Core infrastructure and is not intended to be used
+        ///     directly from your code. This API may change or be removed in future releases.
+        /// </summary>
+        ICsvTable GetTable([NotNull] IEntityType entityType);
 
         /// <summary>
         ///     This API supports the Entity Framework Core infrastructure and is not intended to be used
